@@ -1,0 +1,36 @@
+name: Build Android APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip project
+        run: |
+          mkdir -p /tmp/proj
+          unzip -q "$(ls *.zip | head -1)" -d /tmp/proj
+          cd /tmp/proj/*/ && pwd > /tmp/projdir
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: android-actions/setup-android@v3
+      - name: Build web app
+        run: |
+          cd "$(cat /tmp/projdir)"
+          npm install
+          cd client
+          npx vite build
+      - name: Build debug APK
+        run: |
+          cd "$(cat /tmp/projdir)/client"
+          npx cap add android
+          npx cap sync android
+          cd android
+          ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: retro-youtube-time-machine-apk
+          path: /tmp/proj/*/client/android/app/build/outputs/apk/debug/app-debug.apk
