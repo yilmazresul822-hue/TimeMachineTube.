@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 jobs:
   apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Unzip project
@@ -13,19 +13,22 @@ jobs:
           unzip -q "$(ls *.zip | head -1)" -d /tmp/proj
           cd /tmp/proj/*/ && pwd > /tmp/projdir
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - uses: actions/setup-java@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: 17 }
-      - uses: android-actions/setup-android@v3
+      - name: Accept Android licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
       - name: Build web app
         run: |
           cd "$(cat /tmp/projdir)"
           npm install
+          npm install -w client @capacitor/core@6 @capacitor/android@6 @capacitor/cli@6
           cd client
           npx vite build
       - name: Build debug APK
         run: |
           cd "$(cat /tmp/projdir)/client"
+          echo '{"appId":"com.retroyt.timemachine","appName":"Retro YouTube Time Machine","webDir":"dist","server":{"androidScheme":"https"}}' > capacitor.config.json
           npx cap add android
           npx cap sync android
           cd android
